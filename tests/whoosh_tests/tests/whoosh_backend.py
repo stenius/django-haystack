@@ -637,6 +637,85 @@ class LiveWhooshSearchQuerySetTestCase(TestCase):
         self.assertTrue(isinstance(sqs[0], SearchResult))
 
 
+class LiveWhooshMoreLikeThisTestCase(TestCase):
+    fixtures = ['bulk_data.json']
+    
+    def setUp(self):
+        super(LiveWhooshMoreLikeThisTestCase, self).setUp()
+        
+        # Stow.
+        temp_path = os.path.join('tmp', 'test_whoosh_query')
+        self.old_whoosh_path = getattr(settings, 'HAYSTACK_WHOOSH_PATH', temp_path)
+        settings.HAYSTACK_WHOOSH_PATH = temp_path
+        
+        self.site = SearchSite()
+        self.sb = SearchBackend(site=self.site)
+        self.wmsi = WhooshMockSearchIndex(MockModel, backend=self.sb)
+        self.site.register(MockModel, WhooshMockSearchIndex)
+        
+        # Stow.
+        import haystack
+        self.old_debug = settings.DEBUG
+        settings.DEBUG = True
+        self.old_site = haystack.site
+        haystack.site = self.site
+        
+        self.sb.setup()
+        self.sqs = SearchQuerySet(site=self.site)
+        
+        # Wipe it clean.
+        self.sqs.query.backend.clear()
+        
+        for mock in MockModel.objects.all():
+            self.wmsi.update_object(mock)
+    
+    def tearDown(self):
+        if os.path.exists(settings.HAYSTACK_WHOOSH_PATH):
+            shutil.rmtree(settings.HAYSTACK_WHOOSH_PATH)
+        
+        settings.HAYSTACK_WHOOSH_PATH = self.old_whoosh_path
+        
+        import haystack
+        haystack.site = self.old_site
+        settings.DEBUG = self.old_debug
+        
+        super(LiveWhooshMoreLikeThisTestCase, self).tearDown()
+    
+    def tearDown(self):
+        # Restore.
+        import haystack
+        haystack.site = self.old_site
+        super(LiveWhooshMoreLikeThisTestCase, self).tearDown()
+    
+    def test_more_like_this(self):
+        mlt = self.sqs.more_like_this(MockModel.objects.get(pk=1))
+        self.assertEqual(mlt.count(), 24)
+        self.assertEqual([result.pk for result in mlt], ['6', '14', '4', '10', '22', '5', '3', '12', '2', '23', '18', '19', '13', '7', '15', '21', '9', '1', '2', '20', '16', '17', '8', '11'])
+        self.assertEqual(len([result.pk for result in mlt]), 24)
+        
+        alt_mlt = self.sqs.filter(name='daniel3').more_like_this(MockModel.objects.get(pk=3))
+        self.assertEqual(alt_mlt.count(), 10)
+        self.assertEqual([result.pk for result in alt_mlt], ['23', '13', '17', '16', '22', '19', '4', '10', '1', '2'])
+        self.assertEqual(len([result.pk for result in alt_mlt]), 10)
+        
+        alt_mlt_with_models = self.sqs.models(MockModel).more_like_this(MockModel.objects.get(pk=1))
+        self.assertEqual(alt_mlt_with_models.count(), 22)
+        self.assertEqual([result.pk for result in alt_mlt_with_models], ['6', '14', '4', '10', '22', '5', '3', '12', '2', '23', '18', '19', '13', '7', '15', '21', '9', '20', '16', '17', '8', '11'])
+        self.assertEqual(len([result.pk for result in alt_mlt_with_models]), 22)
+        
+        if hasattr(MockModel.objects, 'defer'):
+            # Make sure MLT works with deferred bits.
+            mi = MockModel.objects.defer('foo').get(pk=1)
+            self.assertEqual(mi._deferred, True)
+            deferred = self.sqs.models(MockModel).more_like_this(mi)
+            self.assertEqual(deferred.count(), 0)
+            self.assertEqual([result.pk for result in deferred], [])
+            self.assertEqual(len([result.pk for result in deferred]), 0)
+        
+        # Ensure that swapping the ``result_class`` works.
+        self.assertTrue(isinstance(self.sqs.result_class(MockSearchResult).more_like_this(MockModel.objects.get(pk=1))[0], MockSearchResult))
+
+
 class LiveWhooshAutocompleteTestCase(TestCase):
     fixtures = ['bulk_data.json']
     
