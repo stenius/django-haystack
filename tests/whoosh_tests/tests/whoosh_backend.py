@@ -210,12 +210,12 @@ class WhooshSearchBackendTestCase(TestCase):
         self.sb.update(self.smmi, self.sample_objs)
         self.assertEqual(len(self.whoosh_search(u'*')), 23)
         
-        # Unsupported by Whoosh. Should see empty results.
-        self.assertEqual(self.sb.more_like_this(self.sample_objs[0])['hits'], 0)
+        # Now supported by Whoosh (as of 1.8.2). See the ``LiveWhooshMoreLikeThisTestCase``.
+        self.assertEqual(self.sb.more_like_this(self.sample_objs[0])['hits'], 23)
         
         # Make sure that swapping the ``result_class`` doesn't blow up.
         try:
-            self.sb.search(u'index document', result_class=MockSearchResult)
+            self.sb.more_like_this(self.sample_objs[0], result_class=MockSearchResult)
         except:
             self.fail()
     
@@ -688,24 +688,24 @@ class LiveWhooshMoreLikeThisTestCase(TestCase):
         super(LiveWhooshMoreLikeThisTestCase, self).tearDown()
     
     def test_more_like_this(self):
-        mlt = self.sqs.more_like_this(MockModel.objects.get(pk=1))
-        self.assertEqual(mlt.count(), 24)
-        self.assertEqual([result.pk for result in mlt], ['6', '14', '4', '10', '22', '5', '3', '12', '2', '23', '18', '19', '13', '7', '15', '21', '9', '1', '2', '20', '16', '17', '8', '11'])
-        self.assertEqual(len([result.pk for result in mlt]), 24)
+        mlt = self.sqs.more_like_this(MockModel.objects.get(pk=22))
+        self.assertEqual(mlt.count(), 22)
+        self.assertEqual([result.pk for result in mlt], [u'9', u'8', u'7', u'6', u'5', u'4', u'3', u'2', u'1', u'21', u'20', u'19', u'18', u'17', u'16', u'15', u'14', u'13', u'12', u'11', u'10', u'23'])
+        self.assertEqual(len([result.pk for result in mlt]), 22)
         
-        alt_mlt = self.sqs.filter(name='daniel3').more_like_this(MockModel.objects.get(pk=3))
+        alt_mlt = self.sqs.filter(name='daniel3').more_like_this(MockModel.objects.get(pk=13))
         self.assertEqual(alt_mlt.count(), 10)
         self.assertEqual([result.pk for result in alt_mlt], ['23', '13', '17', '16', '22', '19', '4', '10', '1', '2'])
         self.assertEqual(len([result.pk for result in alt_mlt]), 10)
         
-        alt_mlt_with_models = self.sqs.models(MockModel).more_like_this(MockModel.objects.get(pk=1))
+        alt_mlt_with_models = self.sqs.models(MockModel).more_like_this(MockModel.objects.get(pk=11))
         self.assertEqual(alt_mlt_with_models.count(), 22)
         self.assertEqual([result.pk for result in alt_mlt_with_models], ['6', '14', '4', '10', '22', '5', '3', '12', '2', '23', '18', '19', '13', '7', '15', '21', '9', '20', '16', '17', '8', '11'])
         self.assertEqual(len([result.pk for result in alt_mlt_with_models]), 22)
         
         if hasattr(MockModel.objects, 'defer'):
             # Make sure MLT works with deferred bits.
-            mi = MockModel.objects.defer('foo').get(pk=1)
+            mi = MockModel.objects.defer('foo').get(pk=21)
             self.assertEqual(mi._deferred, True)
             deferred = self.sqs.models(MockModel).more_like_this(mi)
             self.assertEqual(deferred.count(), 0)
@@ -713,7 +713,7 @@ class LiveWhooshMoreLikeThisTestCase(TestCase):
             self.assertEqual(len([result.pk for result in deferred]), 0)
         
         # Ensure that swapping the ``result_class`` works.
-        self.assertTrue(isinstance(self.sqs.result_class(MockSearchResult).more_like_this(MockModel.objects.get(pk=1))[0], MockSearchResult))
+        self.assertTrue(isinstance(self.sqs.result_class(MockSearchResult).more_like_this(MockModel.objects.get(pk=21))[0], MockSearchResult))
 
 
 class LiveWhooshAutocompleteTestCase(TestCase):
