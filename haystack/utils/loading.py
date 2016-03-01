@@ -4,8 +4,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import copy
 import inspect
+import threading
 import warnings
-
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import module_has_submodule
@@ -92,7 +92,7 @@ def load_router(full_router_path):
 class ConnectionHandler(object):
     def __init__(self, connections_info):
         self.connections_info = connections_info
-        self._connections = {}
+        self.thread_local = threading.local()
         self._index = None
 
     def ensure_defaults(self, alias):
@@ -105,16 +105,20 @@ class ConnectionHandler(object):
             conn['ENGINE'] = 'haystack.backends.simple_backend.SimpleEngine'
 
     def __getitem__(self, key):
-        if key in self._connections:
-            return self._connections[key]
+        if not hasattr(self.thread_local, 'connections'):
+            self.thread_local.connections = {}
+        elif key in self.thread_local.connections:
+            return self.thread_local.connections[key]
 
         self.ensure_defaults(key)
-        self._connections[key] = load_backend(self.connections_info[key]['ENGINE'])(using=key)
-        return self._connections[key]
+        self.thread_local.connections[key] = load_backend(self.connections_info[key]['ENGINE'])(using=key)
+        return self.thread_local.connections[key]
 
     def reload(self, key):
+        if not hasattr(self.thread_local, 'connections'):
+            self.thread_local.connections = {}
         try:
-            del self._connections[key]
+            del self.thread_local.connections[key]
         except KeyError:
             pass
 
@@ -125,16 +129,23 @@ class ConnectionHandler(object):
 
 
 class ConnectionRouter(object):
-    def __init__(self, routers_list=None):
-        self.routers_list = routers_list
-        self.routers = []
+    def __init__(self):
+        self._routers = None
 
-        if self.routers_list is None:
-            self.routers_list = ['haystack.routers.DefaultRouter']
+    @property
+    def routers(self):
+        if self._routers is None:
+            default_routers = ['haystack.routers.DefaultRouter']
+            router_list = getattr(settings, 'HAYSTACK_ROUTERS', default_routers)
+            # in case HAYSTACK_ROUTERS is empty, fallback to default routers
+            if not len(router_list):
+                router_list = default_routers
 
-        for router_path in self.routers_list:
-            router_class = load_router(router_path)
-            self.routers.append(router_class())
+            self._routers = []
+            for router_path in router_list:
+                router_class = load_router(router_path)
+                self._routers.append(router_class())
+        return self._routers
 
     def for_action(self, action, **hints):
         conns = []

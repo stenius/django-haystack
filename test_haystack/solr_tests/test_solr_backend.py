@@ -45,7 +45,7 @@ def clear_solr_index():
 class SolrMockSearchIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
     name = indexes.CharField(model_attr='author', faceted=True)
-    pub_date = indexes.DateField(model_attr='pub_date')
+    pub_date = indexes.DateTimeField(model_attr='pub_date')
 
     def get_model(self):
         return MockModel
@@ -75,7 +75,7 @@ class SolrMockOverriddenFieldNameSearchIndex(indexes.SearchIndex, indexes.Indexa
 class SolrMaintainTypeMockSearchIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
     month = indexes.CharField(indexed=False)
-    pub_date = indexes.DateField(model_attr='pub_date')
+    pub_date = indexes.DateTimeField(model_attr='pub_date')
 
     def prepare_month(self, obj):
         return "%02d" % obj.pub_date.month
@@ -87,7 +87,7 @@ class SolrMaintainTypeMockSearchIndex(indexes.SearchIndex, indexes.Indexable):
 class SolrMockModelSearchIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(model_attr='foo', document=True)
     name = indexes.CharField(model_attr='author')
-    pub_date = indexes.DateField(model_attr='pub_date')
+    pub_date = indexes.DateTimeField(model_attr='pub_date')
 
     def get_model(self):
         return MockModel
@@ -96,7 +96,7 @@ class SolrMockModelSearchIndex(indexes.SearchIndex, indexes.Indexable):
 class SolrAnotherMockModelSearchIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True)
     name = indexes.CharField(model_attr='author')
-    pub_date = indexes.DateField(model_attr='pub_date')
+    pub_date = indexes.DateTimeField(model_attr='pub_date')
 
     def get_model(self):
         return AnotherMockModel
@@ -112,7 +112,7 @@ class SolrBoostMockSearchIndex(indexes.SearchIndex, indexes.Indexable):
     )
     author = indexes.CharField(model_attr='author', weight=2.0)
     editor = indexes.CharField(model_attr='editor')
-    pub_date = indexes.DateField(model_attr='pub_date')
+    pub_date = indexes.DateTimeField(model_attr='pub_date')
 
     def get_model(self):
         return AFourthMockModel
@@ -168,7 +168,7 @@ class SolrComplexFacetsMockSearchIndex(indexes.SearchIndex, indexes.Indexable):
 class SolrAutocompleteMockModelSearchIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(model_attr='foo', document=True)
     name = indexes.CharField(model_attr='author')
-    pub_date = indexes.DateField(model_attr='pub_date')
+    pub_date = indexes.DateTimeField(model_attr='pub_date')
     text_auto = indexes.EdgeNgramField(model_attr='foo')
     name_auto = indexes.EdgeNgramField(model_attr='author')
 
@@ -960,6 +960,17 @@ class LiveSolrSearchQuerySetTestCase(TestCase):
         sqs = self.sqs.auto_query('Canon+PowerShot+ELPH+(Black)')
         self.assertEqual(sqs.query.build_query(), u'Canon\\+PowerShot\\+ELPH\\+\\(Black\\)')
         sqs = sqs.filter(tags__in=['cameras', 'electronics'])
+        self.assertEqual(len(sqs), 0)
+
+    def test_query__in(self):
+        self.assertGreater(len(self.sqs), 0)
+        sqs = self.sqs.filter(django_ct='core.mockmodel', django_id__in=[1,2])
+        self.assertEqual(len(sqs), 2)
+
+    def test_query__in_empty_list(self):
+        """Confirm that an empty list avoids a Solr exception"""
+        self.assertGreater(len(self.sqs), 0)
+        sqs = self.sqs.filter(id__in=[])
         self.assertEqual(len(sqs), 0)
 
     # Regressions
