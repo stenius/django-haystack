@@ -142,8 +142,8 @@ class Command(BaseCommand):
             default=True, help='Will pass commit=False to the backend.'
         )
         parser.add_argument(
-            'app_label', nargs='?',
-            help='App label of an application to update the search index.')
+            'app_labels', nargs='*',
+            help='App label of one or more applications to update the search index.')
 
     def handle(self, *args, **options):
         self.verbosity = int(options.get('verbosity', 1))
@@ -186,11 +186,12 @@ class Command(BaseCommand):
             except ValueError:
                 pass
 
-        if not args:
-            args = haystack_load_apps()
+        app_labels = options['app_labels']
+        if not app_labels:
+            app_labels = haystack_load_apps()
 
         output = []
-        for label in args:
+        for label in app_labels:
             label_output = self.handle_label(label, **options)
             if label_output:
                 output.append(label_output)

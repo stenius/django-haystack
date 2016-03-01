@@ -13,10 +13,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "-f", "--filename", action="store", type="string", dest="filename",
+            "-f", "--filename", action="store", type=str, dest="filename",
             help='If provided, directs output to a file instead of stdout.')
         parser.add_argument(
-            "-u", "--using", action="store", type="string", dest="using", default=constants.DEFAULT_ALIAS,
+            "-u", "--using", action="store", type=str, dest="using", default=constants.DEFAULT_ALIAS,
             help='If provided, chooses a connection to work with.')
 
     def handle(self, **options):
