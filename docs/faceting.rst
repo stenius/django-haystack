@@ -216,9 +216,9 @@ URLconf should resemble::
     from haystack.views import FacetedSearchView
     
     
-    urlpatterns = patterns('haystack.views',
+    urlpatterns = [
         url(r'^$', FacetedSearchView(form_class=FacetedSearchForm, facet_fields=['author']), name='haystack_search'),
-    )
+    ]
 
 The ``FacetedSearchView`` will now instantiate the ``FacetedSearchForm``.
 The specified ``facet_fields`` will be present in the context variable
