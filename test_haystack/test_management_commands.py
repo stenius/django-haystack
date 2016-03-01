@@ -11,6 +11,8 @@ __all__ = ['CoreManagementCommandsTestCase']
 
 
 class CoreManagementCommandsTestCase(TestCase):
+    fixtures = ["initial_data.json"]
+
     @patch("haystack.management.commands.update_index.Command.update_backend")
     def test_update_index_default_using(self, m):
         """update_index uses default index when --using is not present"""

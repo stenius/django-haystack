@@ -17,6 +17,8 @@ from ..core.models import AnotherMockModel, MockModel
 
 
 class ElasticsearchSearchQueryTestCase(TestCase):
+    fixtures = ["initial_data.json"]
+
     def setUp(self):
         super(ElasticsearchSearchQueryTestCase, self).setUp()
         self.sq = connections['elasticsearch'].get_query()
@@ -162,6 +164,8 @@ class ElasticsearchSearchQueryTestCase(TestCase):
 
 
 class ElasticsearchSearchQuerySpatialBeforeReleaseTestCase(TestCase):
+    fixtures = ["initial_data.json"]
+
     def setUp(self):
         super(ElasticsearchSearchQuerySpatialBeforeReleaseTestCase, self).setUp()
         self.backend = connections['elasticsearch'].get_backend()
@@ -185,6 +189,8 @@ class ElasticsearchSearchQuerySpatialBeforeReleaseTestCase(TestCase):
 
 
 class ElasticsearchSearchQuerySpatialAfterReleaseTestCase(TestCase):
+    fixtures = ["initial_data.json"]
+
     def setUp(self):
         super(ElasticsearchSearchQuerySpatialAfterReleaseTestCase, self).setUp()
         self.backend = connections['elasticsearch'].get_backend()
