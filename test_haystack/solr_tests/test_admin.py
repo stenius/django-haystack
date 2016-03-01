@@ -70,7 +70,8 @@ class SearchModelAdminTestCase(TestCase):
         self.assertIn(5, result_pks)
 
         # Make sure only changelist is affected.
-        resp = self.client.get('/admin/core/mockmodel/1/')
+        # follow=True for django 1.9 which adds /change/ to the url
+        resp = self.client.get('/admin/core/mockmodel/1/', follow=True)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(connections['solr'].queries), 3)
         self.assertEqual(resp.context['original'].id, 1)
