@@ -208,7 +208,8 @@ class SearchQuerySet(object):
                     ui = connections[self.query._using].get_unified_index()
                     index = ui.get_index(model)
                     objects = index.read_queryset(using=self.query._using)
-                    loaded_objects[model] = objects.in_bulk(models_pks[model])
+                    pks = map(lambda x: x[0], models_pks[model])
+                    loaded_objects[model] = objects.in_bulk(pks)
                 except NotHandled:
                     self.log.warning("Model '%s' not handled by the routers", model)
                     # Revert to old behaviour
@@ -218,9 +219,9 @@ class SearchQuerySet(object):
             if self._load_all:
                 # We have to deal with integer keys being cast from strings
                 model_objects = loaded_objects.get(result.model, {})
-                if result.pk not in model_objects:
+                if result.pk not in model_objects.keys():
                     try:
-                        result.pk = int(result.pk)
+                        result.pk = int(result.pk[0])
                     except ValueError:
                         pass
                 try:
