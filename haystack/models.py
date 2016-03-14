@@ -81,7 +81,8 @@ class SearchResult(object):
 
             try:
                 try:
-                    self._object = self.searchindex.read_queryset().get(pk=self.pk)
+                    pk = self.pk[0]
+                    self._object = self.searchindex.read_queryset().get(pk=pk)
                 except NotHandled:
                     self.log.warning("Model '%s.%s' not handled by the routers.", self.app_label, self.model_name)
                     # Revert to old behaviour
